@@ -36,7 +36,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 
-set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "include/fdt_parser.h")
+set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "include/fdt_parser.hpp")
 
 if (CMAKE_SYSTEM_PROCESSOR STREQUAL CMAKE_HOST_SYSTEM_PROCESSOR)
     add_subdirectory(${PROJECT_SOURCE_DIR}/test)

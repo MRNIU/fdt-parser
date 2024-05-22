@@ -9,7 +9,7 @@
 /// @todo 不用 assert
 #include "cassert"
 #include "cstring"
-#include "fdt_parser.h"
+#include "fdt_parser.hpp"
 
 namespace FDT_PARSER {
 
