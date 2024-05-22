@@ -7,23 +7,37 @@
 # Set minimum cmake version
 cmake_minimum_required(VERSION 3.10)
 
-project(fdt_parser LANGUAGES CXX)
+project(fdt_parser
+    LANGUAGES CXX
+    VERSION 0.0.1
+)
 
-if(${PROJECT_SOURCE_DIR} STREQUAL ${fdt_parser_BINARY_DIR})
-    message(FATAL_ERROR "In-source builds not allowed. Please make a new directory (called a build directory) and run CMake from there.")
-endif()
+# 禁止原地编译
+if (${PROJECT_SOURCE_DIR} STREQUAL ${PROJECT_BINARY_DIR})
+    message(
+            FATAL_ERROR
+            "In-source builds not allowed. Please make a new directory (called a build directory) and run CMake from there."
+    )
+endif ()
 
 set(CMAKE_CXX_STANDARD 17)
 
-# Set cmake moudle path
-set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+add_library(${PROJECT_NAME} STATIC ${PROJECT_SOURCE_DIR}/src/fdt_parser.cpp)
 
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+target_compile_options(${PROJECT_NAME} PRIVATE
+        $<$<CONFIG:Release>:-O3;-Werror>
+        -Wall
+        -Wextra
+        # -ffreestanding
+)
 
-aux_source_directory(${PROJECT_SOURCE_DIR}/src/ fdr_parser_src)
+target_include_directories(${PROJECT_NAME} PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/include>
+    $<INSTALL_INTERFACE:include>
+)
 
-include_directories(${PROJECT_SOURCE_DIR}/src/include/)
+set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "include/fdt_parser.h")
 
-add_library(fdt_parser SHARED ${fdr_parser_src})
-add_library(fdt_parser_static STATIC ${fdr_parser_src})
+if (CMAKE_SYSTEM_PROCESSOR STREQUAL CMAKE_HOST_SYSTEM_PROCESSOR)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/test)
+endif ()
