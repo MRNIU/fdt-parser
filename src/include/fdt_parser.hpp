@@ -7,6 +7,7 @@
 #ifndef FDT_PARSER_SRC_INCLUDE_FDT_PARSER_H
 #define FDT_PARSER_SRC_INCLUDE_FDT_PARSER_H
 
+#include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <functional>
@@ -27,7 +28,7 @@ namespace FDT_PARSER {
 int fdt_parser_printf(const char* format, ...);
 
 // 对齐 向上取整
-static inline uintptr_t ALIGN(uintptr_t _x, size_t _align) {
+static inline uintptr_t align_up_power_of_two(uintptr_t _x, size_t _align) {
   return ((_x + _align - 1) & (~(_align - 1)));
 }
 
@@ -436,7 +437,8 @@ class fdt_parser final {
           // 跳过 type
           iter.addr++;
           // 跳过 name
-          iter.addr += ALIGN(strlen((char*)iter.addr) + 1, 4) / 4;
+          iter.addr +=
+              align_up_power_of_two(strlen((char*)iter.addr) + 1, 4) / 4;
           break;
         }
         case FDT_END_NODE: {
@@ -469,7 +471,7 @@ class fdt_parser final {
           // 跳过 nameoff
           iter.addr++;
           // 跳过 data，并进行对齐
-          iter.addr += ALIGN(iter.prop_len, 4) / 4;
+          iter.addr += align_up_power_of_two(iter.prop_len, 4) / 4;
           iter.prop_len = 0;
           break;
         }
