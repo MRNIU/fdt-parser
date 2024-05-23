@@ -608,25 +608,25 @@ class fdt_parser final {
    * @param  _len            长度
    * @todo 补充说明
    */
-  void print_attr_propenc(const iter_data_t* _iter, size_t* _cells,
+  void print_attr_propenc(const iter_data_t& _iter, size_t* _cells,
                           size_t _len) {
     // 字节总数
     uint32_t entry_size = 0;
     // 属性长度
-    uint32_t remain = _iter->prop_len;
+    uint32_t remain = _iter.prop_len;
     // 属性数据
-    uint32_t* reg = _iter->prop_addr;
-    printf("%s: ", _iter->prop_name);
+    uint32_t* reg = _iter.prop_addr;
+    printf("%s: ", _iter.prop_name);
 
     // 计算
     for (size_t i = 0; i < _len; i++) {
       entry_size += 4 * _cells[i];
     }
 
-    printf("(len=%u/%u) ", _iter->prop_len, entry_size);
+    printf("(len=%u/%u) ", _iter.prop_len, entry_size);
 
     // 理论上应该是可以整除的，如果不行说明有问题
-    assert(_iter->prop_len % entry_size == 0);
+    assert(_iter.prop_len % entry_size == 0);
 
     // 数据长度大于 0
     while (remain > 0) {
