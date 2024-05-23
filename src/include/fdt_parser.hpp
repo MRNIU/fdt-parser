@@ -20,9 +20,24 @@
 
 namespace FDT_PARSER {
 
-int fdt_parser_printf(const char* format, ...);
+int fdt_parser_printf(const char* format, ...) { return 0; }
 
-bool fdt_parser_assert(bool);
+bool fdt_parser_assert(bool) { return true; }
+
+// fdt_parser_be32toh 函数
+static inline uint32_t fdt_parser_be32toh(uint32_t big_endian_32bits) {
+  // 判断系统是否为小端序
+  if ((*(uint16_t*)"\0\xff" >= 0x100)) {
+    // 如果是小端序，则需要转换字节顺序
+    return ((big_endian_32bits & 0xFF000000) >> 24) |
+           ((big_endian_32bits & 0x00FF0000) >> 8) |
+           ((big_endian_32bits & 0x0000FF00) << 8) |
+           ((big_endian_32bits & 0x000000FF) << 24);
+  } else {
+    // 如果是大端序，则不需要转换
+    return big_endian_32bits;
+  }
+}
 
 // 对齐 向上取整
 static inline uintptr_t align_up_power_of_two(uintptr_t _x, size_t _align) {
@@ -401,7 +416,7 @@ class fdt_parser final {
 
     while (1) {
       //
-      iter.type = be32toh(iter.addr[0]);
+      iter.type = fdt_parser_be32toh(iter.addr[0]);
       switch (iter.type) {
         case FDT_NOP: {
           // 跳过 type
@@ -440,8 +455,9 @@ class fdt_parser final {
           break;
         }
         case FDT_PROP: {
-          iter.prop_len = be32toh(iter.addr[1]);
-          iter.prop_name = (char*)(dtb_info.str + be32toh(iter.addr[2]));
+          iter.prop_len = fdt_parser_be32toh(iter.addr[1]);
+          iter.prop_name =
+              (char*)(dtb_info.str + fdt_parser_be32toh(iter.addr[2]));
           iter.prop_addr = iter.addr + 3;
           if (_cb_flags & DT_ITER_PROP) {
             if (_cb(nodes, phandle_maps, iter, _data)) {
@@ -532,15 +548,15 @@ class fdt_parser final {
       case FDT_PROP: {
         // 获取 cells 信息
         if (strcmp(_iter.prop_name, "#address-cells") == 0) {
-          _nodes.first[idx].address_cells = be32toh(_iter.addr[3]);
+          _nodes.first[idx].address_cells = fdt_parser_be32toh(_iter.addr[3]);
         } else if (strcmp(_iter.prop_name, "#size-cells") == 0) {
-          _nodes.first[idx].size_cells = be32toh(_iter.addr[3]);
+          _nodes.first[idx].size_cells = fdt_parser_be32toh(_iter.addr[3]);
         } else if (strcmp(_iter.prop_name, "#interrupt-cells") == 0) {
-          _nodes.first[idx].interrupt_cells = be32toh(_iter.addr[3]);
+          _nodes.first[idx].interrupt_cells = fdt_parser_be32toh(_iter.addr[3]);
         }
         // phandle 信息
         else if (strcmp(_iter.prop_name, "phandle") == 0) {
-          _nodes.first[idx].phandle = be32toh(_iter.addr[3]);
+          _nodes.first[idx].phandle = fdt_parser_be32toh(_iter.addr[3]);
           // 更新 phandle_map
           _phandle_maps.first[_phandle_maps.second].phandle =
               _nodes.first[idx].phandle;
@@ -553,7 +569,7 @@ class fdt_parser final {
         _nodes.first[idx].props[_nodes.first[idx].prop_count].addr =
             (uintptr_t)(_iter.addr + 3);
         _nodes.first[idx].props[_nodes.first[idx].prop_count].len =
-            be32toh(_iter.addr[1]);
+            fdt_parser_be32toh(_iter.addr[1]);
         _nodes.first[idx].prop_count++;
         break;
       }
@@ -582,7 +598,7 @@ class fdt_parser final {
     node_t* parent = nullptr;
     // 设置中断父节点
     if (strcmp(_iter.prop_name, "interrupt-parent") == 0) {
-      phandle = be32toh(_iter.addr[3]);
+      phandle = fdt_parser_be32toh(_iter.addr[3]);
       // parent = get_phandle(phandle);
       for (size_t i = 0; i < _phandle_maps.second; i++) {
         if (_phandle_maps.first[i].phandle == phandle) {
@@ -622,19 +638,19 @@ class fdt_parser final {
       // resource 一般来说两者是相等的
       if (_node.parent->address_cells == 1) {
         fdt_parser_assert(_node.parent->size_cells == 1);
-        _resource.mem.addr = be32toh(((uint32_t*)_prop.addr)[0]);
-        _resource.mem.len = be32toh(((uint32_t*)_prop.addr)[1]);
+        _resource.mem.addr = fdt_parser_be32toh(((uint32_t*)_prop.addr)[0]);
+        _resource.mem.len = fdt_parser_be32toh(((uint32_t*)_prop.addr)[1]);
       } else if (_node.parent->address_cells == 2) {
         fdt_parser_assert(_node.parent->size_cells == 2);
-        _resource.mem.addr = be32toh(((uint32_t*)_prop.addr)[0]) +
-                             be32toh(((uint32_t*)_prop.addr)[1]);
-        _resource.mem.len = be32toh(((uint32_t*)_prop.addr)[2]) +
-                            be32toh(((uint32_t*)_prop.addr)[3]);
+        _resource.mem.addr = fdt_parser_be32toh(((uint32_t*)_prop.addr)[0]) +
+                             fdt_parser_be32toh(((uint32_t*)_prop.addr)[1]);
+        _resource.mem.len = fdt_parser_be32toh(((uint32_t*)_prop.addr)[2]) +
+                            fdt_parser_be32toh(((uint32_t*)_prop.addr)[3]);
       } else {
         fdt_parser_assert(0);
       }
     } else if (_resource.type & resource_t::INTR_NO) {
-      _resource.intr_no = be32toh(((uint32_t*)_prop.addr)[0]);
+      _resource.intr_no = fdt_parser_be32toh(((uint32_t*)_prop.addr)[0]);
     }
     return;
   }
@@ -693,17 +709,21 @@ class fdt_parser final {
     // 头信息
     dtb_info.header = (fdt_header_t*)_dtb_addr;
     // 魔数
-    fdt_parser_assert(be32toh(dtb_info.header->magic) == FDT_MAGIC);
+    fdt_parser_assert(fdt_parser_be32toh(dtb_info.header->magic) == FDT_MAGIC);
     // 版本
-    fdt_parser_assert(be32toh(dtb_info.header->version) == FDT_VERSION);
+    fdt_parser_assert(fdt_parser_be32toh(dtb_info.header->version) ==
+                      FDT_VERSION);
     // 内存保留区
     dtb_info.reserved =
         (fdt_reserve_entry_t*)(_dtb_addr +
-                               be32toh(dtb_info.header->off_mem_rsvmap));
+                               fdt_parser_be32toh(
+                                   dtb_info.header->off_mem_rsvmap));
     // 数据区
-    dtb_info.data = _dtb_addr + be32toh(dtb_info.header->off_dt_struct);
+    dtb_info.data =
+        _dtb_addr + fdt_parser_be32toh(dtb_info.header->off_dt_struct);
     // 字符区
-    dtb_info.str = _dtb_addr + be32toh(dtb_info.header->off_dt_strings);
+    dtb_info.str =
+        _dtb_addr + fdt_parser_be32toh(dtb_info.header->off_dt_strings);
     // 检查保留内存
     dtb_mem_reserved();
     // 初始化节点的基本信息
@@ -727,7 +747,8 @@ class fdt_parser final {
         fdt_parser_printf("%s: ", nodes.first[i].props[j].name);
         for (size_t k = 0; k < nodes.first[i].props[j].len / 4; k++) {
           fdt_parser_printf(
-              "0x%X ", be32toh(((uint32_t*)nodes.first[i].props[j].addr)[k]));
+              "0x%X ",
+              fdt_parser_be32toh(((uint32_t*)nodes.first[i].props[j].addr)[k]));
         }
         fdt_parser_printf("\n");
       }
