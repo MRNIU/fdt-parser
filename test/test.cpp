@@ -13,11 +13,11 @@
 int main(int, char** _argv) {
   std::ifstream input(_argv[1], std::ios::binary);
   std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(input), {});
-  printf("\ndatalen: %d\n", buffer.size());
+  printf("\ndatalen: %ld\n", buffer.size());
 
   std::array<uint8_t, 3810> fileArray;
 
-  for (auto i = 0; i < buffer.size(); i++) {
+  for (size_t i = 0; i < buffer.size(); i++) {
     fileArray[i] = buffer[i];
     // printf("%X ", buffer[i]);
   }
