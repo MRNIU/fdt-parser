@@ -1,3 +1,6 @@
+
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/MRNIU/fdt-parser/build.yml)
+
 # fdt-parser
 
 解析 dtc 生成的 fdt 数据。
