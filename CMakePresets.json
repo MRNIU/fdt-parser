@@ -43,7 +43,7 @@
         },
         "CMAKE_BUILD_TYPE": {
           "type": "STRING",
-          "value": "Debug"
+          "value": "Release"
         },
         "EXECUTABLE_OUTPUT_PATH": {
           "type": "STRING",

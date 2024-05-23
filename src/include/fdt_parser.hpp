@@ -73,7 +73,7 @@ struct resource_t {
   friend std::ostream& operator<<(std::ostream& _os, const resource_t& _res) {
     printf("%s: ", _res.name);
     if (_res.type & MEM) {
-      printf("MEM(0x%p, 0x%lX)", (void*)_res.mem.addr, _res.mem.len);
+      printf("MEM(0x%lX, 0x%lX)", _res.mem.addr, _res.mem.len);
     }
     if (_res.type & INTR_NO) {
       printf(", INTR_NO(0x%X)", _res.intr_no);
@@ -594,20 +594,26 @@ class fdt_parser final {
    * @return true            成功
    * @return false           失败
    */
-  static bool dtb_init_interrupt_cb(nodes_t& _nodes, phandle_maps_t&,
+  static bool dtb_init_interrupt_cb(nodes_t& _nodes,
+                                    phandle_maps_t& _phandle_maps,
                                     const iter_data_t& _iter, void*) {
-    // uint8_t idx = _iter.nodes_idx;
-    // uint32_t phandle;
-    // node_t* parent;
-    // // 设置中断父节点
-    // if (strcmp(_iter.prop_name, "interrupt-parent") == 0) {
-    //   phandle = be32toh(_iter.addr[3]);
-    //   parent = get_phandle(phandle);
-    //   // 没有找到则报错
-    //   assert(parent != nullptr);
-    //   _nodes.first[idx].interrupt_parent = parent;
-    // }
-    // // 返回 false 表示需要迭代全部节点
+    uint8_t idx = _iter.nodes_idx;
+    uint32_t phandle;
+    node_t* parent = nullptr;
+    // 设置中断父节点
+    if (strcmp(_iter.prop_name, "interrupt-parent") == 0) {
+      phandle = be32toh(_iter.addr[3]);
+      // parent = get_phandle(phandle);
+      for (size_t i = 0; i < _phandle_maps.second; i++) {
+        if (_phandle_maps.first[i].phandle == phandle) {
+          parent = _phandle_maps.first[i].node;
+        }
+      }
+      // 没有找到则报错
+      assert(parent != nullptr);
+      _nodes.first[idx].interrupt_parent = parent;
+    }
+    // 返回 false 表示需要迭代全部节点
     return false;
   }
 
@@ -776,12 +782,13 @@ class fdt_parser final {
         std::bind(dtb_init_cb, std::placeholders::_1, std::placeholders::_2,
                   std::placeholders::_3, std::placeholders::_4),
         nullptr, dtb_info.data);
-    // // 中断信息初始化，因为需要查找 phandle，所以在基本信息初始化完成后进行
-    // dtb_iter(DT_ITER_PROP,
-    //          std::bind(&dtb_init_interrupt_cb, this, std::placeholders::_1,
-    //                    std::placeholders::_2),
-    //          nullptr, _dtb_addr);
-#define DEBUG
+    // 中断信息初始化，因为需要查找 phandle，所以在基本信息初始化完成后进行
+    dtb_iter(DT_ITER_PROP,
+             std::bind(dtb_init_interrupt_cb, std::placeholders::_1,
+                       std::placeholders::_2, std::placeholders::_3,
+                       std::placeholders::_4),
+             nullptr, dtb_info.data);
+// #define DEBUG
 #ifdef DEBUG
     // 输出所有信息
     for (size_t i = 0; i < nodes.second; i++) {
@@ -795,7 +802,6 @@ class fdt_parser final {
         printf("\n");
       }
     }
-#undef DEBUG
 #endif
     return true;
   }
