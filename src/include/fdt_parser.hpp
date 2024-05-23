@@ -7,15 +7,10 @@
 #ifndef FDT_PARSER_SRC_INCLUDE_FDT_PARSER_H
 #define FDT_PARSER_SRC_INCLUDE_FDT_PARSER_H
 
-#include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <functional>
 #include <optional>
-
-#include "iostream"
-/// @todo 不用 assert
-#include "cassert"
 
 // See devicetree-specification-v0.3.pdf
 // https://e-mailky.github.io/2016-12-06-dts-introduce
@@ -26,6 +21,8 @@
 namespace FDT_PARSER {
 
 int fdt_parser_printf(const char* format, ...);
+
+bool fdt_parser_assert(bool);
 
 // 对齐 向上取整
 static inline uintptr_t align_up_power_of_two(uintptr_t _x, size_t _align) {
@@ -62,23 +59,6 @@ struct resource_t {
     mem.len = 0;
     intr_no = 0;
     return;
-  }
-
-  /**
-   * @brief resource_t 输出
-   * @param  _os             输出流
-   * @param  _res            要输出的 resource_t
-   * @return std::ostream&   输出流
-   */
-  friend std::ostream& operator<<(std::ostream& _os, const resource_t& _res) {
-    printf("%s: ", _res.name);
-    if (_res.type & MEM) {
-      printf("MEM(0x%lX, 0x%lX)", _res.mem.addr, _res.mem.len);
-    }
-    if (_res.type & INTR_NO) {
-      printf(", INTR_NO(0x%X)", _res.intr_no);
-    }
-    return _os;
   }
 };
 
@@ -390,7 +370,7 @@ class fdt_parser final {
     fdt_reserve_entry_t* entry = dtb_info.reserved;
     if (entry->addr_le || entry->size_le) {
       // 目前没有考虑这种情况，先报错
-      assert(0);
+      fdt_parser_assert(0);
     }
     return;
   }
@@ -485,7 +465,7 @@ class fdt_parser final {
           return;
         }
         default: {
-          printf("unrecognized token 0x%X\n", iter.type);
+          fdt_parser_printf("unrecognized token 0x%X\n", iter.type);
           return;
         }
       }
@@ -610,61 +590,11 @@ class fdt_parser final {
         }
       }
       // 没有找到则报错
-      assert(parent != nullptr);
+      fdt_parser_assert(parent != nullptr);
       _nodes.first[idx].interrupt_parent = parent;
     }
     // 返回 false 表示需要迭代全部节点
     return false;
-  }
-
-  /**
-   * @brief 输出不定长度的数据
-   * @param  _iter           要输出的迭代对象
-   * @param  _cells          cell 数
-   * @param  _len            长度
-   * @todo 补充说明
-   */
-  void print_attr_propenc(const iter_data_t& _iter, size_t* _cells,
-                          size_t _len) {
-    // 字节总数
-    uint32_t entry_size = 0;
-    // 属性长度
-    uint32_t remain = _iter.prop_len;
-    // 属性数据
-    uint32_t* reg = _iter.prop_addr;
-    printf("%s: ", _iter.prop_name);
-
-    // 计算
-    for (size_t i = 0; i < _len; i++) {
-      entry_size += 4 * _cells[i];
-    }
-
-    printf("(len=%u/%u) ", _iter.prop_len, entry_size);
-
-    // 理论上应该是可以整除的，如果不行说明有问题
-    assert(_iter.prop_len % entry_size == 0);
-
-    // 数据长度大于 0
-    while (remain > 0) {
-      std::cout << "<";
-      for (size_t i = 0; i < _len; i++) {
-        // 直接输出
-        for (size_t j = 0; j < _cells[i]; j++) {
-          printf("0x%X ", be32toh(*reg));
-          // 下一个 cell
-          reg++;
-          // 减 4，即一个 cell 大小
-          remain -= 4;
-        }
-
-        if (i != _len - 1) {
-          std::cout << "| ";
-        }
-      }
-      // \b 删除最后一个 "| " 中的空格
-      std::cout << "\b>";
-    }
-    return;
   }
 
   /**
@@ -691,17 +621,17 @@ class fdt_parser final {
       // 根据 address_cells 与 size_cells 填充
       // resource 一般来说两者是相等的
       if (_node.parent->address_cells == 1) {
-        assert(_node.parent->size_cells == 1);
+        fdt_parser_assert(_node.parent->size_cells == 1);
         _resource.mem.addr = be32toh(((uint32_t*)_prop.addr)[0]);
         _resource.mem.len = be32toh(((uint32_t*)_prop.addr)[1]);
       } else if (_node.parent->address_cells == 2) {
-        assert(_node.parent->size_cells == 2);
+        fdt_parser_assert(_node.parent->size_cells == 2);
         _resource.mem.addr = be32toh(((uint32_t*)_prop.addr)[0]) +
                              be32toh(((uint32_t*)_prop.addr)[1]);
         _resource.mem.len = be32toh(((uint32_t*)_prop.addr)[2]) +
                             be32toh(((uint32_t*)_prop.addr)[3]);
       } else {
-        assert(0);
+        fdt_parser_assert(0);
       }
     } else if (_resource.type & resource_t::INTR_NO) {
       _resource.intr_no = be32toh(((uint32_t*)_prop.addr)[0]);
@@ -763,9 +693,9 @@ class fdt_parser final {
     // 头信息
     dtb_info.header = (fdt_header_t*)_dtb_addr;
     // 魔数
-    assert(be32toh(dtb_info.header->magic) == FDT_MAGIC);
+    fdt_parser_assert(be32toh(dtb_info.header->magic) == FDT_MAGIC);
     // 版本
-    assert(be32toh(dtb_info.header->version) == FDT_VERSION);
+    fdt_parser_assert(be32toh(dtb_info.header->version) == FDT_VERSION);
     // 内存保留区
     dtb_info.reserved =
         (fdt_reserve_entry_t*)(_dtb_addr +
@@ -792,14 +722,14 @@ class fdt_parser final {
 #ifdef DEBUG
     // 输出所有信息
     for (size_t i = 0; i < nodes.second; i++) {
-      std::cout << nodes.first[i].path << ": " << std::endl;
+      fdt_parser_printf("%s:\n", nodes.first[i].path);
       for (size_t j = 0; j < nodes.first[i].prop_count; j++) {
-        printf("%s: ", nodes.first[i].props[j].name);
+        fdt_parser_printf("%s: ", nodes.first[i].props[j].name);
         for (size_t k = 0; k < nodes.first[i].props[j].len / 4; k++) {
-          printf("0x%X ",
-                 be32toh(((uint32_t*)nodes.first[i].props[j].addr)[k]));
+          fdt_parser_printf(
+              "0x%X ", be32toh(((uint32_t*)nodes.first[i].props[j].addr)[k]));
         }
-        printf("\n");
+        fdt_parser_printf("\n");
       }
     }
 #endif
@@ -816,10 +746,9 @@ class fdt_parser final {
   bool find_via_path(const char* _path, resource_t* _resource) {
     // 找到节点
     auto node = find_node_via_path(_path);
-    // std::cout << node->path << std::endl;
     // 找到 reg
     for (size_t i = 0; i < node->prop_count; i++) {
-      // printf("node->props[i].name: %s\n", node->props[i].name);
+      // fdt_parser_printf("node->props[i].name: %s\n", node->props[i].name);
       if (strcmp(node->props[i].name, "reg") == 0) {
         // 填充数据
         _resource->type |= resource_t::MEM;
@@ -865,127 +794,6 @@ class fdt_parser final {
       }
     }
     return res;
-  }
-
-  /**
-   * @brief iter 输出
-   * @param  _os             输出流
-   * @param  _iter           要输出的 iter
-   * @return std::ostream&   输出流
-   */
-  // friend std::ostream& operator<<(std::ostream& _os, const iter_data_t&
-  // _iter) {
-  //   // 输出路径
-  //   _os << _iter.path << ": ";
-  //   // 根据属性类型输出
-  //   switch (fdt_parser::get_instance().get_fmt(_iter.prop_name)) {
-  //     // 未知
-  //     case fdt_parser::FMT_UNKNOWN: {
-  //       printf("%s: (unknown format, len=0x%X)", _iter.prop_name,
-  //              _iter.prop_len);
-  //       break;
-  //     }
-  //     // 空
-  //     case fdt_parser::FMT_EMPTY: {
-  //       _os << _iter.prop_name << ": (empty)";
-  //       break;
-  //     }
-  //     // 32 位整数
-  //     case fdt_parser::FMT_U32: {
-  //       printf("%s: 0x%X", _iter.prop_name,
-  //              be32toh(*(uint32_t*)_iter.prop_addr));
-  //       break;
-  //     }
-  //     // 64 位整数
-  //     case fdt_parser::FMT_U64: {
-  //       printf("%s: 0x%p", _iter.prop_name,
-  //              be32toh(*(uint64_t*)_iter.prop_addr));
-  //       break;
-  //     }
-  //     // 字符串
-  //     case fdt_parser::FMT_STRING: {
-  //       _os << _iter.prop_name << ": " << (char*)_iter.prop_addr;
-  //       break;
-  //     }
-  //     // phandle
-  //     case fdt_parser::FMT_PHANDLE: {
-  //       uint32_t phandle = be32toh(_iter.addr[3]);
-  //       fdt_parser::node_t* ref =
-  //           fdt_parser::get_instance().get_phandle(phandle);
-  //       if (ref != nullptr) {
-  //         printf("%s: <phandle &%s>", _iter.prop_name, ref->path.path[0]);
-  //       } else {
-  //         printf("%s: <phandle 0x%X>", _iter.prop_name, phandle);
-  //       }
-  //       break;
-  //     }
-  //     // 字符串列表
-  //     case fdt_parser::FMT_STRINGLIST: {
-  //       size_t len = 0;
-  //       char* str = (char*)_iter.prop_addr;
-  //       _os << _iter.prop_name << ": [";
-  //       while (len < _iter.prop_len) {
-  //         // 用 "" 分隔
-  //         _os << "\"" << str << "\"";
-  //         len += strlen(str) + 1;
-  //         str = (char*)((uint8_t*)_iter.prop_addr + len);
-  //       }
-  //       _os << "]";
-  //       break;
-  //     }
-  //     // reg，不定长的 32 位数据
-  //     case fdt_parser::FMT_REG: {
-  //       // 获取节点索引
-  //       uint8_t idx = _iter.nodes_idx;
-  //       // 全部 cells 大小
-  //       // devicetree-specification-v0.3.pdf#2.3.6
-  //       size_t cells[] = {
-  //           fdt_parser::nodes[idx].parent->address_cells,
-  //           fdt_parser::nodes[idx].parent->size_cells,
-  //       };
-  //       // 调用辅助函数进行输出
-  //       fdt_parser::get_instance().print_attr_propenc(
-  //           &_iter, cells, sizeof(cells) / sizeof(size_t));
-  //       break;
-  //     }
-  //     case fdt_parser::FMT_RANGES: {
-  //       // 获取节点索引
-  //       uint8_t idx = _iter.nodes_idx;
-  //       // 全部 cells 大小
-  //       // devicetree-specification-v0.3.pdf#2.3.8
-  //       size_t cells[] = {
-  //           fdt_parser::nodes[idx].address_cells,
-  //           fdt_parser::nodes[idx].parent->address_cells,
-  //           fdt_parser::nodes[idx].size_cells,
-  //       };
-  //       // 调用辅助函数进行输出
-  //       fdt_parser::get_instance().print_attr_propenc(
-  //           &_iter, cells, sizeof(cells) / sizeof(size_t));
-  //       break;
-  //     }
-  //     default: {
-  //       assert(0);
-  //       break;
-  //     }
-  //   }
-  //   return _os;
-  // }
-
-  /**
-   * @brief 路径输出
-   * @param  _os             输出流
-   * @param  _path           要输出的 path
-   * @return std::ostream&   输出流
-   */
-  friend std::ostream& operator<<(std::ostream& _os, const path_t& _path) {
-    if (_path.len == 1) {
-      _os << "/";
-    }
-    for (size_t i = 1; i < _path.len; i++) {
-      _os << "/";
-      _os << _path.path[i];
-    }
-    return _os;
   }
 };
 
