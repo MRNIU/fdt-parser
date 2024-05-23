@@ -9,8 +9,7 @@
 
 #include <cstdint>
 #include <cstring>
-#include <functional>
-#include <optional>
+#include <utility>
 
 // See devicetree-specification-v0.3.pdf
 // https://e-mailky.github.io/2016-12-06-dts-introduce
@@ -20,9 +19,9 @@
 
 namespace FDT_PARSER {
 
-int fdt_parser_printf(const char* format, ...) { return 0; }
+__attribute__((weak)) int fdt_parser_printf(const char*, ...) { return -1; }
 
-bool fdt_parser_assert(bool) { return true; }
+__attribute__((weak)) bool fdt_parser_assert(bool) { return false; }
 
 // fdt_parser_be32toh 函数
 static inline uint32_t fdt_parser_be32toh(uint32_t big_endian_32bits) {
@@ -354,12 +353,15 @@ class fdt_parser final {
   /// dtb 信息
   dtb_info_t dtb_info;
   /// 节点数组，有效节点数量
-  typedef std::pair<std::array<node_t, MAX_NODES_COUNT>, size_t> nodes_t;
+  typedef std::pair<node_t[MAX_NODES_COUNT], size_t> nodes_t;
   nodes_t nodes;
   /// phandle 数组，有效 phandle 数量
-  typedef std::pair<std::array<phandle_map_t, MAX_NODES_COUNT>, size_t>
-      phandle_maps_t;
+  typedef std::pair<phandle_map_t[MAX_NODES_COUNT], size_t> phandle_maps_t;
   phandle_maps_t phandle_maps;
+
+  /// dtb_iter 回调函数类型
+  typedef bool (*callback_func_t)(nodes_t& _nodes, phandle_maps_t&,
+                                  const iter_data_t&, void*);
 
   /**
    * @brief 查找 _prop_name 在 dt_fmt_t 的索引
@@ -389,10 +391,6 @@ class fdt_parser final {
     }
     return;
   }
-
-  typedef std::function<bool(nodes_t& _nodes, phandle_maps_t&,
-                             const iter_data_t&, void*)>
-      callback_func_t;
 
   /**
    * @brief 迭代函数
@@ -727,17 +725,10 @@ class fdt_parser final {
     // 检查保留内存
     dtb_mem_reserved();
     // 初始化节点的基本信息
-    dtb_iter(
-        DT_ITER_BEGIN_NODE | DT_ITER_END_NODE | DT_ITER_PROP,
-        std::bind(dtb_init_cb, std::placeholders::_1, std::placeholders::_2,
-                  std::placeholders::_3, std::placeholders::_4),
-        nullptr, dtb_info.data);
-    // 中断信息初始化，因为需要查找 phandle，所以在基本信息初始化完成后进行
-    dtb_iter(DT_ITER_PROP,
-             std::bind(dtb_init_interrupt_cb, std::placeholders::_1,
-                       std::placeholders::_2, std::placeholders::_3,
-                       std::placeholders::_4),
+    dtb_iter(DT_ITER_BEGIN_NODE | DT_ITER_END_NODE | DT_ITER_PROP, dtb_init_cb,
              nullptr, dtb_info.data);
+    // 中断信息初始化，因为需要查找 phandle，所以在基本信息初始化完成后进行
+    dtb_iter(DT_ITER_PROP, dtb_init_interrupt_cb, nullptr, dtb_info.data);
 // #define DEBUG
 #ifdef DEBUG
     // 输出所有信息

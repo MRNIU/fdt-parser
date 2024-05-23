@@ -8,7 +8,7 @@ cmake_minimum_required(VERSION 3.27)
 
 project(fdt_parser
     LANGUAGES CXX
-    VERSION 1.0.0
+    VERSION 2.0.0
 )
 
 # 禁止原地编译
@@ -23,7 +23,6 @@ add_library(${PROJECT_NAME} INTERFACE)
 
 target_include_directories(${PROJECT_NAME} INTERFACE
     ${PROJECT_SOURCE_DIR}/src/include
-    
 )
 
 if (CMAKE_SYSTEM_PROCESSOR STREQUAL CMAKE_HOST_SYSTEM_PROCESSOR)

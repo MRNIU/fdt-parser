@@ -36,3 +36,12 @@ make
 
     参考 test.cpp
 
+
+3. 如果要使用 printf/assert，需要自己实现两个函数
+
+    ```c++
+    int fdt_parser_printf(const char*, ...);
+
+    bool fdt_parser_assert(bool);
+    ```
+

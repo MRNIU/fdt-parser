@@ -4,13 +4,16 @@
 // Based on https://github.com/brenns10/sos
 // test.cpp for MRNIU/fdt-parser.
 
+#include <cassert>
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <vector>
+#include <array>
 
 #include "fdt_parser.hpp"
 
-// usage: 
+// usage:
 // ./bin/fdt_parser_test ../test/riscv64_qemu_virt.dtb
 int main(int, char** _argv) {
   std::ifstream input(_argv[1], std::ios::binary);
