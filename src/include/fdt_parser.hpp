@@ -8,8 +8,11 @@
 #define FDT_PARSER_SRC_INCLUDE_FDT_PARSER_H
 
 #include "cstdint"
+#include "cstring"
 #include "functional"
 #include "iostream"
+/// @todo 不用 assert
+#include "cassert"
 
 // See devicetree-specification-v0.3.pdf
 // https://e-mailky.github.io/2016-12-06-dts-introduce
@@ -717,30 +720,43 @@ class fdt_parser final {
   static constexpr const uint8_t DT_ITER_PROP = 0x04;
 
   /**
+   * 构造函数
+   * @param _name 光照名称
+   */
+  explicit fdt_parser(uintptr_t _dtb_addr) { dtb_init(_dtb_addr); }
+
+  /// @name 默认构造/析构函数
+  /// @{
+  fdt_parser() = default;
+  fdt_parser(const fdt_parser& _light) = default;
+  fdt_parser(fdt_parser&& _light) = default;
+  auto operator=(const fdt_parser& _light) -> fdt_parser& = default;
+  auto operator=(fdt_parser&& _light) -> fdt_parser& = default;
+  ~fdt_parser() = default;
+  /// @}
+
+  /**
    * @brief 初始化
+   * @param _dtb_addr dtb 二进制信息地址
    * @return true            成功
    * @return false           失败
    */
-  uintptr_t boot_info_addr;
-  size_t boot_info_size;
 
-  bool dtb_init(void) {
+  bool dtb_init(uintptr_t _dtb_addr) {
     // 头信息
-    dtb_info.header = (fdt_header_t*)boot_info_addr;
+    dtb_info.header = (fdt_header_t*)_dtb_addr;
     // 魔数
     assert(be32toh(dtb_info.header->magic) == FDT_MAGIC);
     // 版本
     assert(be32toh(dtb_info.header->version) == FDT_VERSION);
-    // 设置大小
-    boot_info_size = be32toh(dtb_info.header->totalsize);
     // 内存保留区
     dtb_info.reserved =
-        (fdt_reserve_entry_t*)(boot_info_addr +
+        (fdt_reserve_entry_t*)(_dtb_addr +
                                be32toh(dtb_info.header->off_mem_rsvmap));
     // 数据区
-    dtb_info.data = boot_info_addr + be32toh(dtb_info.header->off_dt_struct);
+    dtb_info.data = _dtb_addr + be32toh(dtb_info.header->off_dt_struct);
     // 字符区
-    dtb_info.str = boot_info_addr + be32toh(dtb_info.header->off_dt_strings);
+    dtb_info.str = _dtb_addr + be32toh(dtb_info.header->off_dt_strings);
     // 检查保留内存
     dtb_mem_reserved();
     // 初始化 map
@@ -750,12 +766,12 @@ class fdt_parser final {
     // dtb_iter(DT_ITER_BEGIN_NODE | DT_ITER_END_NODE | DT_ITER_PROP,
     //          std::bind(&dtb_init_cb, this, std::placeholders::_1,
     //                    std::placeholders::_2),
-    //          nullptr, boot_info_addr);
+    //          nullptr, _dtb_addr);
     // // 中断信息初始化，因为需要查找 phandle，所以在基本信息初始化完成后进行
     // dtb_iter(DT_ITER_PROP,
     //          std::bind(&dtb_init_interrupt_cb, this, std::placeholders::_1,
     //                    std::placeholders::_2),
-    //          nullptr, boot_info_addr);
+    //          nullptr, _dtb_addr);
 // #define DEBUG
 #ifdef DEBUG
     // 输出所有信息

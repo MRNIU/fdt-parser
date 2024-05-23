@@ -43,15 +43,11 @@
         },
         "CMAKE_BUILD_TYPE": {
           "type": "STRING",
-          "value": "Release"
+          "value": "Debug"
         },
         "EXECUTABLE_OUTPUT_PATH": {
           "type": "STRING",
           "value": "${sourceDir}/build/bin"
-        },
-        "LIBRARY_OUTPUT_PATH": {
-          "type": "STRING",
-          "value": "${sourceDir}/build/lib"
         }
       }
     },

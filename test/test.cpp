@@ -4,15 +4,32 @@
 // Based on https://github.com/brenns10/sos
 // test.cpp for MRNIU/fdt-parser.
 
+#include <fstream>
+#include <iostream>
+
 #include "fdt_parser.hpp"
-#include "gtest/gtest.h"
 
 /// TODO
-int main(int, char**) {
-  // 读 dtb 文件，传给 paser
-  // 读去某个字段，需要与 dts 中的一致
+int main(int, char** _argv) {
+  std::ifstream input(_argv[1], std::ios::binary);
+  std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(input), {});
+  printf("\ndatalen: %d\n", buffer.size());
 
-  auto aaa = FDT_PARSER::fdt_parser();
+  std::array<uint8_t, 3810> fileArray;
+
+  for (auto i = 0; i < buffer.size(); i++) {
+    fileArray[i] = buffer[i];
+    // printf("%X ", buffer[i]);
+  }
+
+  auto aaa = FDT_PARSER::fdt_parser((uintptr_t)fileArray.data());
+
+  FDT_PARSER::resource_t resource;
+  // 设置 resource 基本信息
+  resource.type = FDT_PARSER::resource_t::MEM;
+  resource.name = "test";
+  aaa.find_via_prefix("memory@", &resource);
+  std::cout << resource << std::endl;
 
   return 0;
 }
