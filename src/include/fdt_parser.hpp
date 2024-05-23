@@ -7,9 +7,11 @@
 #ifndef FDT_PARSER_SRC_INCLUDE_FDT_PARSER_H
 #define FDT_PARSER_SRC_INCLUDE_FDT_PARSER_H
 
-#include "cstdint"
-#include "cstring"
-#include "functional"
+#include <cstdint>
+#include <cstring>
+#include <functional>
+#include <optional>
+
 #include "iostream"
 /// @todo 不用 assert
 #include "cassert"
@@ -655,38 +657,38 @@ class fdt_parser final {
    * @param  _node           源节点
    * @param  _prop           填充的数据
    */
-  void fill_resource(resource_t* _resource, const node_t* _node,
-                     const prop_t* _prop) {
+  void fill_resource(resource_t& _resource, const node_t& _node,
+                     const prop_t& _prop) {
     // 如果 _resource 名称为空则使用 compatible，如果没有找到则使用 _node 路径
-    if (_resource->name == nullptr) {
-      for (size_t i = 0; i < _node->prop_count; i++) {
-        if (strcmp(_node->props[i].name, "compatible") == 0) {
-          _resource->name = (char*)_node->props[i].addr;
+    if (_resource.name == nullptr) {
+      for (size_t i = 0; i < _node.prop_count; i++) {
+        if (strcmp(_node.props[i].name, "compatible") == 0) {
+          _resource.name = (char*)_node.props[i].addr;
         }
-        if (_resource->name == nullptr) {
-          _resource->name = _node->path.path[_node->path.len - 1];
+        if (_resource.name == nullptr) {
+          _resource.name = _node.path.path[_node.path.len - 1];
         }
       }
     }
     // 内存类型
-    if ((_resource->type & resource_t::MEM) && (_resource->mem.len == 0)) {
+    if ((_resource.type & resource_t::MEM) && (_resource.mem.len == 0)) {
       // 根据 address_cells 与 size_cells 填充
       // resource 一般来说两者是相等的
-      if (_node->parent->address_cells == 1) {
-        assert(_node->parent->size_cells == 1);
-        _resource->mem.addr = be32toh(((uint32_t*)_prop->addr)[0]);
-        _resource->mem.len = be32toh(((uint32_t*)_prop->addr)[1]);
-      } else if (_node->parent->address_cells == 2) {
-        assert(_node->parent->size_cells == 2);
-        _resource->mem.addr = be32toh(((uint32_t*)_prop->addr)[0]) +
-                              be32toh(((uint32_t*)_prop->addr)[1]);
-        _resource->mem.len = be32toh(((uint32_t*)_prop->addr)[2]) +
-                             be32toh(((uint32_t*)_prop->addr)[3]);
+      if (_node.parent->address_cells == 1) {
+        assert(_node.parent->size_cells == 1);
+        _resource.mem.addr = be32toh(((uint32_t*)_prop.addr)[0]);
+        _resource.mem.len = be32toh(((uint32_t*)_prop.addr)[1]);
+      } else if (_node.parent->address_cells == 2) {
+        assert(_node.parent->size_cells == 2);
+        _resource.mem.addr = be32toh(((uint32_t*)_prop.addr)[0]) +
+                             be32toh(((uint32_t*)_prop.addr)[1]);
+        _resource.mem.len = be32toh(((uint32_t*)_prop.addr)[2]) +
+                            be32toh(((uint32_t*)_prop.addr)[3]);
       } else {
         assert(0);
       }
-    } else if (_resource->type & resource_t::INTR_NO) {
-      _resource->intr_no = be32toh(((uint32_t*)_prop->addr)[0]);
+    } else if (_resource.type & resource_t::INTR_NO) {
+      _resource.intr_no = be32toh(((uint32_t*)_prop.addr)[0]);
     }
     return;
   }
@@ -803,11 +805,11 @@ class fdt_parser final {
       if (strcmp(node->props[i].name, "reg") == 0) {
         // 填充数据
         _resource->type |= resource_t::MEM;
-        fill_resource(_resource, node, &node->props[i]);
+        fill_resource(_resource[0], *node, node->props[i]);
       } else if (strcmp(node->props[i].name, "interrupts") == 0) {
         // 填充数据
         _resource->type |= resource_t::INTR_NO;
-        fill_resource(_resource, node, &node->props[i]);
+        fill_resource(_resource[0], *node, node->props[i]);
       }
     }
     return true;
@@ -832,13 +834,13 @@ class fdt_parser final {
           if (strcmp(nodes.first[i].props[j].name, "reg") == 0) {
             _resource[res].type |= resource_t::MEM;
             // 填充数据
-            fill_resource(&_resource[res], &nodes.first[i],
-                          &nodes.first[i].props[j]);
+            fill_resource(_resource[res], nodes.first[i],
+                          nodes.first[i].props[j]);
           } else if (strcmp(nodes.first[i].props[j].name, "interrupts") == 0) {
             _resource[res].type |= resource_t::INTR_NO;
             // 填充数据
-            fill_resource(&_resource[res], &nodes.first[i],
-                          &nodes.first[i].props[j]);
+            fill_resource(_resource[res], nodes.first[i],
+                          nodes.first[i].props[j]);
           }
         }
         res++;
