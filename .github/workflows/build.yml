@@ -1,0 +1,36 @@
+
+# This file is a part of MRNIU/fdt-parser
+# (https://github.com/MRNIU/fdt-parser).
+#
+# build.yml for MRNIU/fdt-parser.
+
+name: build
+
+on:
+  - push
+  - pull_request
+  - release
+
+env:
+  CMAKE_BUILD_TYPE: Release
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install --fix-missing -y gcc g++
+
+      - name: Build test
+        run: |
+          cmake --preset build
+          cmake --build build --target fdt_parser_test
+
+      - name: Run test
+        run: |
+          ./build/bin/fdt_parser_test ./test/riscv64_qemu_virt.dtb
