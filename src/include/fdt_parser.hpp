@@ -346,6 +346,21 @@ class fdt_parser final {
   };
 
   /**
+   * @brief phandles 与 node 的映射关系
+   */
+  struct phandle_map_t {
+    uint32_t phandle;
+    node_t* node;
+  };
+
+  /// dtb 信息
+  dtb_info_t dtb_info;
+  /// 节点数组，有效节点数量
+  std::pair<std::array<node_t, MAX_NODES_COUNT>, size_t> nodes;
+  /// phandle 数组，有效 phandle 数量
+  std::pair<std::array<phandle_map_t, MAX_NODES_COUNT>, size_t> phandle_maps;
+
+  /**
    * @brief 查找 _prop_name 在 dt_fmt_t 的索引
    * @param  _prop_name      要查找的属性
    * @return dt_fmt_t        在 dt_fmt_t 中的索引
@@ -361,14 +376,6 @@ class fdt_parser final {
     }
     return res;
   }
-
-  /**
-   * @brief phandles 与 node 的映射关系
-   */
-  struct phandle_map_t {
-    uint32_t phandle;
-    node_t* node;
-  };
 
   /**
    * @brief 输出 reserved 内存
@@ -483,9 +490,9 @@ class fdt_parser final {
    */
   node_t* get_phandle(uint32_t _phandle) {
     // 在 phandle_map 中寻找对应的节点
-    for (size_t i = 0; i < phandle_map_count; i++) {
-      if (phandle_map[i].phandle == _phandle) {
-        return phandle_map[i].node;
+    for (size_t i = 0; i < phandle_maps.second; i++) {
+      if (phandle_maps.first[i].phandle == _phandle) {
+        return phandle_maps.first[i].node;
       }
     }
     return nullptr;
@@ -506,59 +513,62 @@ class fdt_parser final {
       // 开始
       case FDT_BEGIN_NODE: {
         // 设置节点基本信息
-        nodes[idx].path = _iter->path;
-        nodes[idx].addr = _iter->addr;
-        nodes[idx].depth = _iter->path.len;
+        nodes.first[idx].path = _iter->path;
+        nodes.first[idx].addr = _iter->addr;
+        nodes.first[idx].depth = _iter->path.len;
         // 设置默认值
-        nodes[idx].address_cells = 2;
-        nodes[idx].size_cells = 2;
-        nodes[idx].interrupt_cells = 0;
-        nodes[idx].phandle = 0;
-        nodes[idx].interrupt_parent = nullptr;
+        nodes.first[idx].address_cells = 2;
+        nodes.first[idx].size_cells = 2;
+        nodes.first[idx].interrupt_cells = 0;
+        nodes.first[idx].phandle = 0;
+        nodes.first[idx].interrupt_parent = nullptr;
         // 设置父节点
         // 如果不是根节点
         if (idx != 0) {
           size_t i = idx - 1;
-          while (nodes[i].depth != nodes[idx].depth - 1) {
+          while (nodes.first[i].depth != nodes.first[idx].depth - 1) {
             i--;
           }
-          nodes[idx].parent = &nodes[i];
+          nodes.first[idx].parent = &nodes.first[i];
         }
         // 索引为 0 说明是根节点
         else {
           // 根节点的父节点为空
-          nodes[idx].parent = nullptr;
+          nodes.first[idx].parent = nullptr;
         }
         break;
       }
       case FDT_PROP: {
         // 获取 cells 信息
         if (strcmp(_iter->prop_name, "#address-cells") == 0) {
-          nodes[idx].address_cells = be32toh(_iter->addr[3]);
+          nodes.first[idx].address_cells = be32toh(_iter->addr[3]);
         } else if (strcmp(_iter->prop_name, "#size-cells") == 0) {
-          nodes[idx].size_cells = be32toh(_iter->addr[3]);
+          nodes.first[idx].size_cells = be32toh(_iter->addr[3]);
         } else if (strcmp(_iter->prop_name, "#interrupt-cells") == 0) {
-          nodes[idx].interrupt_cells = be32toh(_iter->addr[3]);
+          nodes.first[idx].interrupt_cells = be32toh(_iter->addr[3]);
         }
         // phandle 信息
         else if (strcmp(_iter->prop_name, "phandle") == 0) {
-          nodes[idx].phandle = be32toh(_iter->addr[3]);
+          nodes.first[idx].phandle = be32toh(_iter->addr[3]);
           // 更新 phandle_map
-          phandle_map[phandle_map_count].phandle = nodes[idx].phandle;
-          phandle_map[phandle_map_count].node = &nodes[idx];
-          phandle_map_count++;
+          phandle_maps.first[phandle_maps.second].phandle =
+              nodes.first[idx].phandle;
+          phandle_maps.first[phandle_maps.second].node = &nodes.first[idx];
+          phandle_maps.second++;
         }
         // 添加属性
-        nodes[idx].props[nodes[idx].prop_count].name = _iter->prop_name;
-        nodes[idx].props[nodes[idx].prop_count].addr =
+        nodes.first[idx].props[nodes.first[idx].prop_count].name =
+            _iter->prop_name;
+        nodes.first[idx].props[nodes.first[idx].prop_count].addr =
             (uintptr_t)(_iter->addr + 3);
-        nodes[idx].props[nodes[idx].prop_count].len = be32toh(_iter->addr[1]);
-        nodes[idx].prop_count++;
+        nodes.first[idx].props[nodes.first[idx].prop_count].len =
+            be32toh(_iter->addr[1]);
+        nodes.first[idx].prop_count++;
         break;
       }
       case FDT_END_NODE: {
         // 节点数+1
-        nodes_count = idx + 1;
+        nodes.second = idx + 1;
         break;
       }
     }
@@ -583,7 +593,7 @@ class fdt_parser final {
       parent = get_phandle(phandle);
       // 没有找到则报错
       assert(parent != nullptr);
-      nodes[idx].interrupt_parent = parent;
+      nodes.first[idx].interrupt_parent = parent;
     }
     // 返回 false 表示需要迭代全部节点
     return false;
@@ -689,28 +699,17 @@ class fdt_parser final {
   node_t* find_node_via_path(const char* _path) {
     node_t* res = nullptr;
     // 遍历 nodes
-    for (size_t i = 0; i < nodes_count; i++) {
+    for (size_t i = 0; i < nodes.second; i++) {
       // 如果 nodes[i] 中有属性/值对符合要求
-      if (nodes[i].path == _path) {
+      if (nodes.first[i].path == _path) {
         // 设置返回值
-        res = &nodes[i];
+        res = &nodes.first[i];
       }
     }
     return res;
   }
 
  public:
-  /// dtb 信息
-  dtb_info_t dtb_info;
-  /// 节点数组
-  node_t nodes[MAX_NODES_COUNT];
-  /// 有效 node 数量
-  size_t nodes_count;
-  /// phandle 数组
-  phandle_map_t phandle_map[MAX_NODES_COUNT];
-  /// 有效 phandle 数量
-  size_t phandle_map_count;
-
   // 用于控制处理哪些属性
   /// 处理节点开始
   static constexpr const uint8_t DT_ITER_BEGIN_NODE = 0x01;
@@ -759,10 +758,7 @@ class fdt_parser final {
     dtb_info.str = _dtb_addr + be32toh(dtb_info.header->off_dt_strings);
     // 检查保留内存
     dtb_mem_reserved();
-    // 初始化 map
-    bzero(nodes, sizeof(nodes));
-    bzero(phandle_map, sizeof(phandle_map));
-    // // 初始化节点的基本信息
+    // 初始化节点的基本信息
     // dtb_iter(DT_ITER_BEGIN_NODE | DT_ITER_END_NODE | DT_ITER_PROP,
     //          std::bind(&dtb_init_cb, this, std::placeholders::_1,
     //                    std::placeholders::_2),
@@ -828,19 +824,21 @@ class fdt_parser final {
     size_t res = 0;
     // 遍历所有节点，查找
     // 由于 @ 均为最底层节点，所以直接比较最后一级即可
-    for (size_t i = 0; i < nodes_count; i++) {
-      if (strncmp(nodes[i].path.path[nodes[i].path.len - 1], _prefix,
-                  strlen(_prefix)) == 0) {
+    for (size_t i = 0; i < nodes.second; i++) {
+      if (strncmp(nodes.first[i].path.path[nodes.first[i].path.len - 1],
+                  _prefix, strlen(_prefix)) == 0) {
         // 找到 reg
-        for (size_t j = 0; j < nodes[i].prop_count; j++) {
-          if (strcmp(nodes[i].props[j].name, "reg") == 0) {
+        for (size_t j = 0; j < nodes.first[i].prop_count; j++) {
+          if (strcmp(nodes.first[i].props[j].name, "reg") == 0) {
             _resource[res].type |= resource_t::MEM;
             // 填充数据
-            fill_resource(&_resource[res], &nodes[i], &nodes[i].props[j]);
-          } else if (strcmp(nodes[i].props[j].name, "interrupts") == 0) {
+            fill_resource(&_resource[res], &nodes.first[i],
+                          &nodes.first[i].props[j]);
+          } else if (strcmp(nodes.first[i].props[j].name, "interrupts") == 0) {
             _resource[res].type |= resource_t::INTR_NO;
             // 填充数据
-            fill_resource(&_resource[res], &nodes[i], &nodes[i].props[j]);
+            fill_resource(&_resource[res], &nodes.first[i],
+                          &nodes.first[i].props[j]);
           }
         }
         res++;
