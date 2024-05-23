@@ -10,7 +10,8 @@
 
 #include "fdt_parser.hpp"
 
-/// TODO
+// usage: 
+// ./bin/fdt_parser_test ../test/riscv64_qemu_virt.dtb
 int main(int, char** _argv) {
   std::ifstream input(_argv[1], std::ios::binary);
   std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(input), {});
