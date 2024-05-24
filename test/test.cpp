@@ -4,12 +4,12 @@
 // Based on https://github.com/brenns10/sos
 // test.cpp for MRNIU/fdt-parser.
 
+#include <array>
 #include <cassert>
 #include <cstring>
 #include <fstream>
 #include <iostream>
 #include <vector>
-#include <array>
 
 #include "fdt_parser.hpp"
 

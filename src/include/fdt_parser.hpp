@@ -7,7 +7,9 @@
 #ifndef FDT_PARSER_SRC_INCLUDE_FDT_PARSER_H
 #define FDT_PARSER_SRC_INCLUDE_FDT_PARSER_H
 
+#include <cstddef>
 #include <cstdint>
+#include <utility>
 
 // See devicetree-specification-v0.3.pdf
 // https://e-mailky.github.io/2016-12-06-dts-introduce
