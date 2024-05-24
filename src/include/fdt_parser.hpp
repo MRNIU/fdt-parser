@@ -219,7 +219,8 @@ class fdt_parser final {
       // 记录当前 _path 处理到的下标
       size_t tmp = 0;
       for (size_t i = 0; i < len; i++) {
-        if (__builtin_strncmp(path[i], &_path[tmp + i], __builtin_strlen(path[i])) != 0) {
+        if (__builtin_strncmp(path[i], &_path[tmp + i],
+                              __builtin_strlen(path[i])) != 0) {
           return false;
         }
         tmp += __builtin_strlen(path[i]);
@@ -437,7 +438,8 @@ class fdt_parser final {
           iter.addr++;
           // 跳过 name
           iter.addr +=
-              align_up_power_of_two(__builtin_strlen((char*)iter.addr) + 1, 4) / 4;
+              align_up_power_of_two(__builtin_strlen((char*)iter.addr) + 1, 4) /
+              4;
           break;
         }
         case FDT_END_NODE: {
@@ -689,10 +691,10 @@ class fdt_parser final {
   /// @name 默认构造/析构函数
   /// @{
   fdt_parser() = default;
-  fdt_parser(const fdt_parser& _light) = default;
-  fdt_parser(fdt_parser&& _light) = default;
-  auto operator=(const fdt_parser& _light) -> fdt_parser& = default;
-  auto operator=(fdt_parser&& _light) -> fdt_parser& = default;
+  fdt_parser(const fdt_parser& _fdt_parser) = default;
+  fdt_parser(fdt_parser&& _fdt_parser) = default;
+  auto operator=(const fdt_parser& _fdt_parser) -> fdt_parser& = default;
+  auto operator=(fdt_parser&& _fdt_parser) -> fdt_parser& = default;
   ~fdt_parser() = default;
   /// @}
 
@@ -786,8 +788,9 @@ class fdt_parser final {
     // 遍历所有节点，查找
     // 由于 @ 均为最底层节点，所以直接比较最后一级即可
     for (size_t i = 0; i < nodes.second; i++) {
-      if (__builtin_strncmp(nodes.first[i].path.path[nodes.first[i].path.len - 1],
-                  _prefix, __builtin_strlen(_prefix)) == 0) {
+      if (__builtin_strncmp(
+              nodes.first[i].path.path[nodes.first[i].path.len - 1], _prefix,
+              __builtin_strlen(_prefix)) == 0) {
         // 找到 reg
         for (size_t j = 0; j < nodes.first[i].prop_count; j++) {
           if (__builtin_strcmp(nodes.first[i].props[j].name, "reg") == 0) {
@@ -795,7 +798,8 @@ class fdt_parser final {
             // 填充数据
             fill_resource(_resource[res], nodes.first[i],
                           nodes.first[i].props[j]);
-          } else if (__builtin_strcmp(nodes.first[i].props[j].name, "interrupts") == 0) {
+          } else if (__builtin_strcmp(nodes.first[i].props[j].name,
+                                      "interrupts") == 0) {
             _resource[res].type |= resource_t::INTR_NO;
             // 填充数据
             fill_resource(_resource[res], nodes.first[i],
