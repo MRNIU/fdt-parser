@@ -30,6 +30,7 @@ jobs:
         run: |
           cmake --preset build
           cmake --build build --target fdt_parser_test
+          cmake --build build --target fdt_parser_empty_test
 
       - name: Run test
         run: |
