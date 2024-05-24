@@ -35,8 +35,21 @@ if (CMAKE_SYSTEM_PROCESSOR STREQUAL CMAKE_HOST_SYSTEM_PROCESSOR)
         -Wextra
     )
 
-    # 添加要链接的库
     target_link_libraries(${PROJECT_NAME}_test PRIVATE
+        fdt_parser
+    )
+
+    add_executable(${PROJECT_NAME}_empty_test
+        test/empty.cpp
+    )
+
+    target_compile_options(${PROJECT_NAME}_empty_test PRIVATE
+        -Wall
+        -Wextra
+        -ffreestanding
+    )
+
+    target_link_libraries(${PROJECT_NAME}_empty_test PRIVATE
         fdt_parser
     )
 endif ()
