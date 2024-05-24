@@ -8,8 +8,6 @@
 #define FDT_PARSER_SRC_INCLUDE_FDT_PARSER_H
 
 #include <cstdint>
-#include <cstring>
-#include <utility>
 
 // See devicetree-specification-v0.3.pdf
 // https://e-mailky.github.io/2016-12-06-dts-introduce
@@ -204,7 +202,7 @@ class fdt_parser final {
         return false;
       }
       for (size_t i = 0; i < len; i++) {
-        if (strcmp(path[i], _path->path[i]) != 0) {
+        if (__builtin_strcmp(path[i], _path->path[i]) != 0) {
           return false;
         }
       }
@@ -219,10 +217,10 @@ class fdt_parser final {
       // 记录当前 _path 处理到的下标
       size_t tmp = 0;
       for (size_t i = 0; i < len; i++) {
-        if (strncmp(path[i], &_path[tmp + i], strlen(path[i])) != 0) {
+        if (__builtin_strncmp(path[i], &_path[tmp + i], __builtin_strlen(path[i])) != 0) {
           return false;
         }
-        tmp += strlen(path[i]);
+        tmp += __builtin_strlen(path[i]);
       }
       return true;
     }
@@ -373,7 +371,7 @@ class fdt_parser final {
     dt_fmt_t res = FMT_UNKNOWN;
     for (size_t i = 0; i < sizeof(props) / sizeof(dt_prop_fmt_t); i++) {
       // 找到了则更新
-      if (strcmp(_prop_name, props[i].prop_name) == 0) {
+      if (__builtin_strcmp(_prop_name, props[i].prop_name) == 0) {
         res = props[i].fmt;
       }
     }
@@ -437,7 +435,7 @@ class fdt_parser final {
           iter.addr++;
           // 跳过 name
           iter.addr +=
-              align_up_power_of_two(strlen((char*)iter.addr) + 1, 4) / 4;
+              align_up_power_of_two(__builtin_strlen((char*)iter.addr) + 1, 4) / 4;
           break;
         }
         case FDT_END_NODE: {
@@ -545,15 +543,15 @@ class fdt_parser final {
       }
       case FDT_PROP: {
         // 获取 cells 信息
-        if (strcmp(_iter.prop_name, "#address-cells") == 0) {
+        if (__builtin_strcmp(_iter.prop_name, "#address-cells") == 0) {
           _nodes.first[idx].address_cells = fdt_parser_be32toh(_iter.addr[3]);
-        } else if (strcmp(_iter.prop_name, "#size-cells") == 0) {
+        } else if (__builtin_strcmp(_iter.prop_name, "#size-cells") == 0) {
           _nodes.first[idx].size_cells = fdt_parser_be32toh(_iter.addr[3]);
-        } else if (strcmp(_iter.prop_name, "#interrupt-cells") == 0) {
+        } else if (__builtin_strcmp(_iter.prop_name, "#interrupt-cells") == 0) {
           _nodes.first[idx].interrupt_cells = fdt_parser_be32toh(_iter.addr[3]);
         }
         // phandle 信息
-        else if (strcmp(_iter.prop_name, "phandle") == 0) {
+        else if (__builtin_strcmp(_iter.prop_name, "phandle") == 0) {
           _nodes.first[idx].phandle = fdt_parser_be32toh(_iter.addr[3]);
           // 更新 phandle_map
           _phandle_maps.first[_phandle_maps.second].phandle =
@@ -595,7 +593,7 @@ class fdt_parser final {
     uint32_t phandle;
     node_t* parent = nullptr;
     // 设置中断父节点
-    if (strcmp(_iter.prop_name, "interrupt-parent") == 0) {
+    if (__builtin_strcmp(_iter.prop_name, "interrupt-parent") == 0) {
       phandle = fdt_parser_be32toh(_iter.addr[3]);
       // parent = get_phandle(phandle);
       for (size_t i = 0; i < _phandle_maps.second; i++) {
@@ -622,7 +620,7 @@ class fdt_parser final {
     // 如果 _resource 名称为空则使用 compatible，如果没有找到则使用 _node 路径
     if (_resource.name == nullptr) {
       for (size_t i = 0; i < _node.prop_count; i++) {
-        if (strcmp(_node.props[i].name, "compatible") == 0) {
+        if (__builtin_strcmp(_node.props[i].name, "compatible") == 0) {
           _resource.name = (char*)_node.props[i].addr;
         }
         if (_resource.name == nullptr) {
@@ -761,11 +759,11 @@ class fdt_parser final {
     // 找到 reg
     for (size_t i = 0; i < node->prop_count; i++) {
       // fdt_parser_printf("node->props[i].name: %s\n", node->props[i].name);
-      if (strcmp(node->props[i].name, "reg") == 0) {
+      if (__builtin_strcmp(node->props[i].name, "reg") == 0) {
         // 填充数据
         _resource->type |= resource_t::MEM;
         fill_resource(_resource[0], *node, node->props[i]);
-      } else if (strcmp(node->props[i].name, "interrupts") == 0) {
+      } else if (__builtin_strcmp(node->props[i].name, "interrupts") == 0) {
         // 填充数据
         _resource->type |= resource_t::INTR_NO;
         fill_resource(_resource[0], *node, node->props[i]);
@@ -786,16 +784,16 @@ class fdt_parser final {
     // 遍历所有节点，查找
     // 由于 @ 均为最底层节点，所以直接比较最后一级即可
     for (size_t i = 0; i < nodes.second; i++) {
-      if (strncmp(nodes.first[i].path.path[nodes.first[i].path.len - 1],
-                  _prefix, strlen(_prefix)) == 0) {
+      if (__builtin_strncmp(nodes.first[i].path.path[nodes.first[i].path.len - 1],
+                  _prefix, __builtin_strlen(_prefix)) == 0) {
         // 找到 reg
         for (size_t j = 0; j < nodes.first[i].prop_count; j++) {
-          if (strcmp(nodes.first[i].props[j].name, "reg") == 0) {
+          if (__builtin_strcmp(nodes.first[i].props[j].name, "reg") == 0) {
             _resource[res].type |= resource_t::MEM;
             // 填充数据
             fill_resource(_resource[res], nodes.first[i],
                           nodes.first[i].props[j]);
-          } else if (strcmp(nodes.first[i].props[j].name, "interrupts") == 0) {
+          } else if (__builtin_strcmp(nodes.first[i].props[j].name, "interrupts") == 0) {
             _resource[res].type |= resource_t::INTR_NO;
             // 填充数据
             fill_resource(_resource[res], nodes.first[i],
