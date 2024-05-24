@@ -684,7 +684,7 @@ class fdt_parser final {
 
   /**
    * 构造函数
-   * @param _name 光照名称
+   * @param _dtb_addr dtb 信息地址
    */
   explicit fdt_parser(uintptr_t _dtb_addr) { dtb_init(_dtb_addr); }
 
