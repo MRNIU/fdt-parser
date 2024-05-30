@@ -33,6 +33,7 @@ if (CMAKE_SYSTEM_PROCESSOR STREQUAL CMAKE_HOST_SYSTEM_PROCESSOR)
     target_compile_options(${PROJECT_NAME}_test PRIVATE
         -Wall
         -Wextra
+        -pedantic
     )
 
     target_link_libraries(${PROJECT_NAME}_test PRIVATE

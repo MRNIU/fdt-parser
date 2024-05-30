@@ -148,7 +148,7 @@ class fdt_parser final {
     uint32_t nameoff;
     /// property value值，作为额外数据以'\0'结尾的字符串形式存储 structure
     /// block, 32 - bits对齐，不够的位用 0x0 补齐
-    uint32_t data[0];
+    uint32_t *data;
   };
 
   /// 路径最大深度
