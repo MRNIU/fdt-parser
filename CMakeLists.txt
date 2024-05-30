@@ -8,7 +8,7 @@ cmake_minimum_required(VERSION 3.27)
 
 project(fdt_parser
     LANGUAGES CXX
-    VERSION 3.0.2
+    VERSION 3.0.3
 )
 
 # 禁止原地编译
