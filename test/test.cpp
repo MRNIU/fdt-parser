@@ -48,5 +48,11 @@ int main(int, char** _argv) {
   assert(resource_plic.mem.addr == 0xC000000);
   assert(resource_plic.mem.len == 0x210000);
 
+  FDT_PARSER::resource_t cpu_frequency;
+  cpu_frequency.type = FDT_PARSER::resource_t::FREQUENCY;
+  result.find_via_prefix("cpus", &cpu_frequency);
+  assert(strcmp(cpu_frequency.name, "cpus") == 0);
+  assert(cpu_frequency.frequency == 0x989680);
+
   return 0;
 }

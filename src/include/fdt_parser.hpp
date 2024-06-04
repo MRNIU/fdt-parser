@@ -53,6 +53,8 @@ struct resource_t {
     MEM = 1 << 0,
     /// 中断号
     INTR_NO = 1 << 1,
+    /// cpu 速度
+    FREQUENCY = 1 << 2,
   };
 
   uint8_t type;
@@ -65,6 +67,9 @@ struct resource_t {
     size_t len;
   } mem;
 
+  /// cpu 速度
+  uint64_t frequency;
+
   /// 中断号
   uint8_t intr_no;
 
@@ -72,6 +77,7 @@ struct resource_t {
     mem.addr = 0;
     mem.len = 0;
     intr_no = 0;
+    frequency = 0;
     return;
   }
 };
@@ -148,7 +154,7 @@ class fdt_parser final {
     uint32_t nameoff;
     /// property value值，作为额外数据以'\0'结尾的字符串形式存储 structure
     /// block, 32 - bits对齐，不够的位用 0x0 补齐
-    uint32_t *data;
+    uint32_t* data;
   };
 
   /// 路径最大深度
@@ -650,7 +656,11 @@ class fdt_parser final {
         fdt_parser_assert(0);
       }
     } else if (_resource.type & resource_t::INTR_NO) {
+      // 中断类型
       _resource.intr_no = fdt_parser_be32toh(((uint32_t*)_prop.addr)[0]);
+    } else if (_resource.type & resource_t::FREQUENCY) {
+      // cpu 速度类型
+      _resource.frequency = fdt_parser_be32toh(((uint32_t*)_prop.addr)[0]);
     }
     return;
   }
@@ -801,6 +811,12 @@ class fdt_parser final {
           } else if (__builtin_strcmp(nodes.first[i].props[j].name,
                                       "interrupts") == 0) {
             _resource[res].type |= resource_t::INTR_NO;
+            // 填充数据
+            fill_resource(_resource[res], nodes.first[i],
+                          nodes.first[i].props[j]);
+          } else if (__builtin_strcmp(nodes.first[i].props[j].name,
+                                      "timebase-frequency") == 0) {
+            _resource[res].type |= resource_t::FREQUENCY;
             // 填充数据
             fill_resource(_resource[res], nodes.first[i],
                           nodes.first[i].props[j]);
