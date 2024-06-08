@@ -24,34 +24,34 @@ __attribute__((weak)) int fdt_parser_printf(const char*, ...) { return -1; }
 __attribute__((weak)) bool fdt_parser_assert(bool) { return false; }
 
 static int fdt_strcmp(const char* s1, const char* s2) {
-  while (*s1 && (*s1 == *s2)) {
-    s1++;
+  while (*s2 && *s1 && (*s2 == *s1)) {
     s2++;
+    s1++;
   }
-  return *(unsigned char*)s1 - *(unsigned char*)s2;
+  return *s2 - *s1;
 }
 
 static int fdt_strncmp(const char* s1, const char* s2, size_t n) {
-  if (n == 0) return 0;
-
-  while (n-- > 0 && *s1 && (*s1 == *s2)) {
-    s1++;
-    s2++;
-  }
-
   if (n == 0) {
     return 0;
-  } else {
-    return *(unsigned char*)s1 - *(unsigned char*)s2;
   }
+  do {
+    if (*s1 != *s2++) {
+      return (*(const unsigned char*)s1 - *(const unsigned char*)(s2 - 1));
+    }
+    if (*s1++ == '\0') {
+      break;
+    }
+  } while (--n != 0);
+  return 0;
 }
 
 static size_t fdt_strlen(const char* s) {
-  const char* p = s;
-  while (*p) {
-    p++;
+  size_t len = 0;
+  while (s[len]) {
+    len++;
   }
-  return p - s;
+  return len;
 }
 
 // fdt_parser_be32toh 函数
