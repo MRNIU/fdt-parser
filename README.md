@@ -1,6 +1,8 @@
 
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/MRNIU/fdt-parser/build.yml)
 
+# 此库已不再维护，如有需要请使用 libfdt(https://git.kernel.org/pub/scm/utils/dtc/dtc.git)
+
 # fdt-parser
 
 解析 dtc 生成的 fdt 数据。
